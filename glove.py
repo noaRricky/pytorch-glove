@@ -104,6 +104,7 @@ class GloVeModel(nn.Module):
         if self.__word_to_id is None:
             raise NotFitToCorpusError(
                 "Need to fit model to corpus before looking up word ids.")
+
         return self.__word_to_id[word]
 
     def embedding_for_tensor(self, tokens):
