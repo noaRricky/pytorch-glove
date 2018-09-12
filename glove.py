@@ -2,21 +2,14 @@ from collections import Counter, defaultdict
 import torch
 import torch.nn as nn
 import torch.nn.init as init
+import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
-
-
-class NotTrainedError(Exception):
-    pass
-
-
-class NotFitToCorpusError(Exception):
-    pass
 
 
 class GloVeModel(nn.Module):
 
     def __init__(self, embedding_size, context_size, vocab_size, min_occurrances=1,
-                 x_max=100, alpha=3 / 4, batch_size=512, learning_rate=0.05):
+                 x_max=100, alpha=3 / 4):
         super(GloVeModel, self).__init__()
 
         self.embedding_size = embedding_size
@@ -31,8 +24,6 @@ class GloVeModel(nn.Module):
         self.min_occurrances = min_occurrances
         self.alpha = alpha
         self.x_max = x_max
-        self.batch_size = batch_size
-        self.learning_rate = learning_rate
 
         self.__focal_embeddings = nn.Embedding(vocab_size, embedding_size)
         self.__context_embeddings = nn.Embedding(vocab_size, embedding_size)
@@ -82,6 +73,33 @@ class GloVeModel(nn.Module):
         ]
         self.__glove_dataset = GloVeDataSet(coocurrence_matrix)
 
+    def train(self, num_epoch, batch_size=512, learning_rate=0.05, batch_interval=100):
+
+        if self.__glove_dataset is None:
+            raise NotFitToCorpusError(
+                "Please fit model with corpus before training")
+
+        # basic training setting
+        optimizer = optim.Adam(self.parameters(), lr=learning_rate)
+        glove_dataloader = DataLoader(self.__glove_dataset, batch_size)
+        total_loss = 0
+
+        for epoch in range(num_epoch):
+            for idx, batch in enumerate(glove_dataloader):
+                optimizer.zero_grad()
+
+                i_s, j_s, counts = batch
+                loss = self.__loss(i_s, j_s, counts)
+
+                total_loss += loss.item()
+                if idx % batch_interval == 0:
+                    avg_loss = total_loss / batch_interval
+                    print("epoch: {}, current step: {}, average loss: {}".format(
+                        epoch, idx, avg_loss))
+
+                loss.backward()
+                optimizer.step()
+
     def id_for_word(self, word):
         if self.__word_to_id is None:
             raise NotFitToCorpusError(
@@ -123,6 +141,14 @@ class GloVeDataSet(Dataset):
         return len(self.__coocurrence_matrix)
 
 
+class NotTrainedError(Exception):
+    pass
+
+
+class NotFitToCorpusError(Exception):
+    pass
+
+
 def _context_windows(region, left_size, right_size):
     """generate left_context, word, right_context tuples for each region
 
@@ -152,8 +178,7 @@ def _window(region, start_index, end_index):
         end_index (int): index for the end step of window
     """
     last_index = len(region) + 1
-    selected_tokens = region[max(start_index, 0)
-                                 : min(end_index, last_index) + 1]
+    selected_tokens = region[max(start_index, 0): min(end_index, last_index) + 1]
     return selected_tokens
 
 
