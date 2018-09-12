@@ -106,6 +106,12 @@ class GloVeModel(nn.Module):
                 "Need to fit model to corpus before looking up word ids.")
         return self.__word_to_id[word]
 
+    def embedding_for_tensor(self, tokens):
+        if not torch.is_tensor(tokens):
+            raise ValueError("the tokens must be pytorch tensor object")
+
+        return self.__focal_embeddings(tokens) + self.__context_embeddings(tokens)
+
     def __loss(self, focal_input, context_input, coocurrence_count):
         x_max, alpha = self.x_max, self.alpha
 
