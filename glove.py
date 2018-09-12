@@ -2,12 +2,22 @@ from collections import Counter, defaultdict
 import torch
 import torch.nn as nn
 import torch.nn.init as init
+from torch.utils.data import DataLoader, Dataset
 
 
-class GloVe(nn.Module):
+class NotTrainedError(Exception):
+    pass
 
-    def __init__(self, embedding_size, context_size, vocab_size=100000, min_occurrances=1, x_max=100, alpha=3 / 4):
-        super(GloVe, self).__init__()
+
+class NotFitToCorpusError(Exception):
+    pass
+
+
+class GloVeModel(nn.Module):
+
+    def __init__(self, embedding_size, context_size, vocab_size, min_occurrances=1,
+                 x_max=100, alpha=3 / 4, batch_size=512, learning_rate=0.05):
+        super(GloVeModel, self).__init__()
 
         self.embedding_size = embedding_size
         if isinstance(context_size, tuple):
@@ -21,12 +31,14 @@ class GloVe(nn.Module):
         self.min_occurrances = min_occurrances
         self.alpha = alpha
         self.x_max = x_max
+        self.batch_size = batch_size
+        self.learning_rate = learning_rate
 
         self.__focal_embeddings = nn.Embedding(vocab_size, embedding_size)
         self.__context_embeddings = nn.Embedding(vocab_size, embedding_size)
         self.__focal_biases = nn.Parameter(torch.Tensor(vocab_size))
         self.__context_biases = nn.Parameter(torch.Tensor(vocab_size))
-        self.__coocurrence_matrix = None
+        self.__glove_dataset = None
 
         for params in self.parameters():
             init.uniform_(params, a=-1, b=1)
@@ -60,23 +72,30 @@ class GloVe(nn.Module):
                 "No coccurrences in corpus, Did you try to reuse a generator?")
 
         # get words bag information
-        self.__words = [word for word, count in word_counts.most_common(vocab_size)
-                        if count >= min_occurrances]
-        self.__word_to_id = {word: i for i, word in enumerate(self.__words)}
-        self.__coocurrence_matrix = {
-            (self.__word_to_id[words[0]], self.__word_to_id[words]): count
+        words = [word for word, count in word_counts.most_common(vocab_size)
+                 if count >= min_occurrances]
+        self.__word_to_id = {word: i for i, word in enumerate(words)}
+        coocurrence_matrix = [
+            (self.__word_to_id[words[0]], self.__word_to_id[words[1]], count)
             for words, count in cooccurence_counts.items()
             if words[0] in self.__word_to_id and words[1] in self.__word_to_id
-        }
+        ]
+        self.__glove_dataset = GloVeDataSet(coocurrence_matrix)
 
-    def forward(self, focal_input, context_input, coocurrence_count):
+    def id_for_word(self, word):
+        if self.__word_to_id is None:
+            raise NotFitToCorpusError(
+                "Need to fit model to corpus before looking up word ids.")
+        return self.__word_to_id[word]
+
+    def __loss(self, focal_input, context_input, coocurrence_count):
         x_max, alpha = self.x_max, self.alpha
 
         focal_embed = self.__focal_embeddings(focal_input)
         context_embed = self.__context_embeddings(context_input)
         focal_bias = self.__focal_biases[focal_input]
         context_bias = self.__context_biases[context_input]
-        
+
         # count weight factor
         weight_factor = torch.pow(coocurrence_count / x_max, alpha)
         weight_factor[weight_factor > 1] = 1
@@ -84,11 +103,24 @@ class GloVe(nn.Module):
         embedding_products = torch.sum(focal_embed * context_embed, dim=1)
         log_cooccurrences = torch.log(coocurrence_count)
 
-        distance_expr = (embedding_products + focal_bias + context_bias + log_cooccurrences) ** 2
-        
+        distance_expr = (embedding_products + focal_bias +
+                         context_bias + log_cooccurrences) ** 2
+
         single_losses = weight_factor * distance_expr
         total_loss = torch.sum(single_losses)
         return total_loss
+
+
+class GloVeDataSet(Dataset):
+
+    def __init__(self, coocurrence_matrix):
+        self.__coocurrence_matrix = coocurrence_matrix
+
+    def __getitem__(self, index):
+        return self.__coocurrence_matrix[index]
+
+    def __len__(self):
+        return len(self.__coocurrence_matrix)
 
 
 def _context_windows(region, left_size, right_size):
@@ -120,7 +152,8 @@ def _window(region, start_index, end_index):
         end_index (int): index for the end step of window
     """
     last_index = len(region) + 1
-    selected_tokens = region[max(start_index, 0): min(end_index, last_index) + 1]
+    selected_tokens = region[max(start_index, 0)
+                                 : min(end_index, last_index) + 1]
     return selected_tokens
 
 
