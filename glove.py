@@ -24,14 +24,23 @@ class GloVe(nn.Module):
 
         self.__focal_embeddings = nn.Embedding(vocab_size, embedding_size)
         self.__context_embeddings = nn.Embedding(vocab_size, embedding_size)
-        self.__focal_bias = nn.Parameter(torch.Tensor(vocab_size))
-        self.__context_bias = nn.Parameter(torch.Tensor(vocab_size))
+        self.__focal_biases = nn.Parameter(torch.Tensor(vocab_size))
+        self.__context_biases = nn.Parameter(torch.Tensor(vocab_size))
         self.__coocurrence_matrix = None
 
         for params in self.parameters():
             init.uniform_(params, a=-1, b=1)
 
     def fit(self, corpus):
+        """get dictionary word list and co-occruence matrix from corpus
+
+        Args:
+            corpus (list): contain str list
+
+        Raises:
+            ValueError: when count zero cocurrences will raise the problems
+        """
+
         left_size, right_size = self.left_context, self.right_context
         vocab_size, min_occurrances = self.vocab_size, self.min_occurrances
 
@@ -60,8 +69,37 @@ class GloVe(nn.Module):
             if words[0] in self.__word_to_id and words[1] in self.__word_to_id
         }
 
+    def forward(self, focal_input, context_input, coocurrence_count):
+        x_max, alpha = self.x_max, self.alpha
+
+        focal_embed = self.__focal_embeddings(focal_input)
+        context_embed = self.__context_embeddings(context_input)
+        focal_bias = self.__focal_biases[focal_input]
+        context_bias = self.__context_biases[context_input]
+        
+        # count weight factor
+        weight_factor = torch.pow(coocurrence_count / x_max, alpha)
+        weight_factor[weight_factor > 1] = 1
+
+        embedding_products = torch.sum(focal_embed * context_embed, dim=1)
+        log_cooccurrences = torch.log(coocurrence_count)
+
+        distance_expr = (embedding_products + focal_bias + context_bias + log_cooccurrences) ** 2
+        
+        single_losses = weight_factor * distance_expr
+        total_loss = torch.sum(single_losses)
+        return total_loss
+
 
 def _context_windows(region, left_size, right_size):
+    """generate left_context, word, right_context tuples for each region
+
+    Args:
+        region (str): a sentence
+        left_size (int): left windows size
+        right_size (int): right windows size
+    """
+
     for i, word in enumerate(region):
         start_index = i - left_size
         end_index = i + right_size
@@ -77,7 +115,7 @@ def _window(region, start_index, end_index):
     its return value with `NULL_WORD`.
 
     Args:
-        region (str): the sentence for extracting the token base on the contet
+        region (str): the sentence for extracting the token base on the context
         start_index (int): index for start step of window
         end_index (int): index for the end step of window
     """
@@ -87,6 +125,10 @@ def _window(region, start_index, end_index):
 
 
 if __name__ == '__main__':
-    embedding_size = 100
-    context_size = 4
-    glove = GloVe(embedding_size, context_size)
+    # embedding_size = 100
+    # context_size = 4
+    # glove = GloVe(embedding_size, context_size)
+    region = 'adfeqewrcfa'
+    start_index = 2
+    end_index = 16
+    print(_window(region, start_index, end_index))
