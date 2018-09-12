@@ -7,6 +7,9 @@ from torch.utils.data import DataLoader, Dataset
 
 
 class GloVeModel(nn.Module):
+    """Implement GloVe model with Pytorch
+    """
+
 
     def __init__(self, embedding_size, context_size, vocab_size, min_occurrances=1,
                  x_max=100, alpha=3 / 4):
@@ -74,6 +77,18 @@ class GloVeModel(nn.Module):
         self.__glove_dataset = GloVeDataSet(coocurrence_matrix)
 
     def train(self, num_epoch, batch_size=512, learning_rate=0.05, batch_interval=100):
+        """Training GloVe model
+        
+        Args:
+            num_epoch (int): number of epoch
+            batch_size (int, optional): Defaults to 512. 
+            learning_rate (float, optional): Defaults to 0.05. learning rate for Adam optimizer
+            batch_interval (int, optional): Defaults to 100. interval time to show average loss
+        
+        Raises:
+            NotFitToCorpusError: if the model is not fit by corpus, the error will be raise
+        """
+
 
         if self.__glove_dataset is None:
             raise NotFitToCorpusError(
