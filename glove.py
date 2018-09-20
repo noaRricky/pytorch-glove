@@ -10,7 +10,6 @@ class GloVeModel(nn.Module):
     """Implement GloVe model with Pytorch
     """
 
-
     def __init__(self, embedding_size, context_size, vocab_size, min_occurrances=1,
                  x_max=100, alpha=3 / 4):
         super(GloVeModel, self).__init__()
@@ -30,8 +29,8 @@ class GloVeModel(nn.Module):
 
         self.__focal_embeddings = nn.Embedding(vocab_size, embedding_size)
         self.__context_embeddings = nn.Embedding(vocab_size, embedding_size)
-        self.__focal_biases = nn.Parameter(torch.Tensor(vocab_size))
-        self.__context_biases = nn.Parameter(torch.Tensor(vocab_size))
+        self.__focal_biases = nn.Embedding(vocab_size, 1)
+        self.__context_biases = nn.Embedding(vocab_size, 1)
         self.__glove_dataset = None
 
         for params in self.parameters():
@@ -41,7 +40,7 @@ class GloVeModel(nn.Module):
         """get dictionary word list and co-occruence matrix from corpus
 
         Args:
-            corpus (list): contain str list
+            corpus (list): contain word id list
 
         Raises:
             ValueError: when count zero cocurrences will raise the problems
@@ -66,29 +65,24 @@ class GloVeModel(nn.Module):
                 "No coccurrences in corpus, Did you try to reuse a generator?")
 
         # get words bag information
-        words = [word for word, count in word_counts.most_common(vocab_size)
-                 if count >= min_occurrances]
-        self.__word_to_id = {word: i for i, word in enumerate(words)}
-        coocurrence_matrix = [
-            (self.__word_to_id[words[0]], self.__word_to_id[words[1]], count)
-            for words, count in cooccurence_counts.items()
-            if words[0] in self.__word_to_id and words[1] in self.__word_to_id
-        ]
+        tokens = [word for word, count in word_counts.most_common(vocab_size)
+                  if count >= min_occurrances]
+        coocurrence_matrix = [(words[0], words[1], count)
+                              for words, count in cooccurence_counts.items() if words[0] in tokens and words[1] in tokens]
         self.__glove_dataset = GloVeDataSet(coocurrence_matrix)
 
     def train(self, num_epoch, batch_size=512, learning_rate=0.05, batch_interval=100):
         """Training GloVe model
-        
+
         Args:
             num_epoch (int): number of epoch
-            batch_size (int, optional): Defaults to 512. 
+            batch_size (int, optional): Defaults to 512.
             learning_rate (float, optional): Defaults to 0.05. learning rate for Adam optimizer
             batch_interval (int, optional): Defaults to 100. interval time to show average loss
-        
+
         Raises:
             NotFitToCorpusError: if the model is not fit by corpus, the error will be raise
         """
-
 
         if self.__glove_dataset is None:
             raise NotFitToCorpusError(
@@ -133,8 +127,8 @@ class GloVeModel(nn.Module):
 
         focal_embed = self.__focal_embeddings(focal_input)
         context_embed = self.__context_embeddings(context_input)
-        focal_bias = self.__focal_biases[focal_input]
-        context_bias = self.__context_biases[context_input]
+        focal_bias = self.__focal_biases(focal_input)
+        context_bias = self.__context_biases(context_input)
 
         # count weight factor
         weight_factor = torch.pow(coocurrence_count / x_max, alpha)
@@ -202,13 +196,3 @@ def _window(region, start_index, end_index):
     last_index = len(region) + 1
     selected_tokens = region[max(start_index, 0): min(end_index, last_index) + 1]
     return selected_tokens
-
-
-if __name__ == '__main__':
-    # embedding_size = 100
-    # context_size = 4
-    # glove = GloVe(embedding_size, context_size)
-    region = 'adfeqewrcfa'
-    start_index = 2
-    end_index = 16
-    print(_window(region, start_index, end_index))
