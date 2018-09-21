@@ -10,7 +10,7 @@ class GloVeModel(nn.Module):
     """Implement GloVe model with Pytorch
     """
 
-    def __init__(self, embedding_size, context_size, vocab_size, x_max=100, alpha=3 / 4):
+    def __init__(self, embedding_size, context_size, vocab_size, min_occurrance=1, x_max=100, alpha=3 / 4):
         super(GloVeModel, self).__init__()
 
         self.embedding_size = embedding_size
@@ -23,6 +23,7 @@ class GloVeModel(nn.Module):
                 "'context_size' should be an int or a tuple of two ints")
         self.vocab_size = vocab_size
         self.alpha = alpha
+        self.min_occurrance = min_occurrance
         self.x_max = x_max
 
         self._focal_embeddings = nn.Embedding(vocab_size, embedding_size)
@@ -45,6 +46,7 @@ class GloVeModel(nn.Module):
         """
 
         left_size, right_size = self.left_context, self.right_context
+        vocab_size, min_occurrance = self.vocab_size, self.min_occurrance
 
         # get co-occurence count matrix
         word_counts = Counter()
@@ -62,8 +64,11 @@ class GloVeModel(nn.Module):
                 "No coccurrences in corpus, Did you try to reuse a generator?")
 
         # get words bag information
+        tokens = [word for word, count in
+                  word_counts.most_common(vocab_size) if count >= min_occurrance]
         coocurrence_matrix = [(words[0], words[1], count)
-                              for words, count in cooccurence_counts.items()]
+                              for words, count in cooccurence_counts.items()
+                              if words[0] in tokens and words[1] in tokens]
         self._glove_dataset = GloVeDataSet(coocurrence_matrix)
 
     def train(self, num_epoch, batch_size=512, learning_rate=0.05, batch_interval=100):
