@@ -10,8 +10,7 @@ class GloVeModel(nn.Module):
     """Implement GloVe model with Pytorch
     """
 
-    def __init__(self, embedding_size, context_size, vocab_size, min_occurrances=1,
-                 x_max=100, alpha=3 / 4):
+    def __init__(self, embedding_size, context_size, vocab_size, x_max=100, alpha=3 / 4):
         super(GloVeModel, self).__init__()
 
         self.embedding_size = embedding_size
@@ -23,7 +22,6 @@ class GloVeModel(nn.Module):
             raise ValueError(
                 "'context_size' should be an int or a tuple of two ints")
         self.vocab_size = vocab_size
-        self.min_occurrances = min_occurrances
         self.alpha = alpha
         self.x_max = x_max
 
@@ -65,10 +63,8 @@ class GloVeModel(nn.Module):
                 "No coccurrences in corpus, Did you try to reuse a generator?")
 
         # get words bag information
-        tokens = [word for word, count in word_counts.most_common(vocab_size)
-                  if count >= min_occurrances]
         coocurrence_matrix = [(words[0], words[1], count)
-                              for words, count in cooccurence_counts.items() if words[0] in tokens and words[1] in tokens]
+                              for words, count in cooccurence_counts.items()]
         self.__glove_dataset = GloVeDataSet(coocurrence_matrix)
 
     def train(self, num_epoch, batch_size=512, learning_rate=0.05, batch_interval=100):
