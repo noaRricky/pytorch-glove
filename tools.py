@@ -6,10 +6,9 @@ class SpacyTokenizer:
     """ Tool for tokenize powered by spacy module
     """
 
-
     def __init__(self, lang: str):
         """ Initialize the language type for token
-        
+
         Args:
             lang (str): language type for tokenizer
         """
@@ -32,7 +31,6 @@ class Dictionary:
         doc {list}: list of documents contains words
     """
 
-
     def __init__(self, doc=None):
 
         self.vocab_size = 0
@@ -42,11 +40,10 @@ class Dictionary:
 
     def update(self, doc: list):
         """ Update word2idx information by doc
-        
+
         Args:
             doc (list): list of words
         """
-
 
         if doc is None:
             return
@@ -67,14 +64,13 @@ class Dictionary:
 
     def corpus(self, doc: list) -> list:
         """ Convert text of documents to idx of documents
-        
+
         Args:
             doc (list): text of documents
-        
+
         Returns:
             list: idx of documents
         """
-
 
         word2idx = self.word2idx
         corpus = [[word2idx[word] for word in line if word in word2idx]
