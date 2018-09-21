@@ -25,11 +25,11 @@ class GloVeModel(nn.Module):
         self.alpha = alpha
         self.x_max = x_max
 
-        self.__focal_embeddings = nn.Embedding(vocab_size, embedding_size)
-        self.__context_embeddings = nn.Embedding(vocab_size, embedding_size)
-        self.__focal_biases = nn.Embedding(vocab_size, 1)
-        self.__context_biases = nn.Embedding(vocab_size, 1)
-        self.__glove_dataset = None
+        self._focal_embeddings = nn.Embedding(vocab_size, embedding_size)
+        self._context_embeddings = nn.Embedding(vocab_size, embedding_size)
+        self._focal_biases = nn.Embedding(vocab_size, 1)
+        self._context_biases = nn.Embedding(vocab_size, 1)
+        self._glove_dataset = None
 
         for params in self.parameters():
             init.uniform_(params, a=-1, b=1)
@@ -45,7 +45,6 @@ class GloVeModel(nn.Module):
         """
 
         left_size, right_size = self.left_context, self.right_context
-        vocab_size, min_occurrances = self.vocab_size, self.min_occurrances
 
         # get co-occurence count matrix
         word_counts = Counter()
@@ -65,7 +64,7 @@ class GloVeModel(nn.Module):
         # get words bag information
         coocurrence_matrix = [(words[0], words[1], count)
                               for words, count in cooccurence_counts.items()]
-        self.__glove_dataset = GloVeDataSet(coocurrence_matrix)
+        self._glove_dataset = GloVeDataSet(coocurrence_matrix)
 
     def train(self, num_epoch, batch_size=512, learning_rate=0.05, batch_interval=100):
         """Training GloVe model
@@ -80,13 +79,13 @@ class GloVeModel(nn.Module):
             NotFitToCorpusError: if the model is not fit by corpus, the error will be raise
         """
 
-        if self.__glove_dataset is None:
+        if self._glove_dataset is None:
             raise NotFitToCorpusError(
                 "Please fit model with corpus before training")
 
         # basic training setting
         optimizer = optim.Adam(self.parameters(), lr=learning_rate)
-        glove_dataloader = DataLoader(self.__glove_dataset, batch_size)
+        glove_dataloader = DataLoader(self._glove_dataset, batch_size)
         total_loss = 0
 
         for epoch in range(num_epoch):
@@ -94,7 +93,7 @@ class GloVeModel(nn.Module):
                 optimizer.zero_grad()
 
                 i_s, j_s, counts = batch
-                loss = self.__loss(i_s, j_s, counts)
+                loss = self._loss(i_s, j_s, counts)
 
                 total_loss += loss.item()
                 if idx % batch_interval == 0:
@@ -106,25 +105,25 @@ class GloVeModel(nn.Module):
                 optimizer.step()
 
     def id_for_word(self, word):
-        if self.__word_to_id is None:
+        if self._word_to_id is None:
             raise NotFitToCorpusError(
                 "Need to fit model to corpus before looking up word ids.")
 
-        return self.__word_to_id[word]
+        return self._word_to_id[word]
 
     def embedding_for_tensor(self, tokens):
         if not torch.is_tensor(tokens):
             raise ValueError("the tokens must be pytorch tensor object")
 
-        return self.__focal_embeddings(tokens) + self.__context_embeddings(tokens)
+        return self._focal_embeddings(tokens) + self._context_embeddings(tokens)
 
-    def __loss(self, focal_input, context_input, coocurrence_count):
+    def _loss(self, focal_input, context_input, coocurrence_count):
         x_max, alpha = self.x_max, self.alpha
 
-        focal_embed = self.__focal_embeddings(focal_input)
-        context_embed = self.__context_embeddings(context_input)
-        focal_bias = self.__focal_biases(focal_input)
-        context_bias = self.__context_biases(context_input)
+        focal_embed = self._focal_embeddings(focal_input)
+        context_embed = self._context_embeddings(context_input)
+        focal_bias = self._focal_biases(focal_input)
+        context_bias = self._context_biases(context_input)
 
         # count weight factor
         weight_factor = torch.pow(coocurrence_count / x_max, alpha)
@@ -144,13 +143,13 @@ class GloVeModel(nn.Module):
 class GloVeDataSet(Dataset):
 
     def __init__(self, coocurrence_matrix):
-        self.__coocurrence_matrix = coocurrence_matrix
+        self._coocurrence_matrix = coocurrence_matrix
 
     def __getitem__(self, index):
-        return self.__coocurrence_matrix[index]
+        return self._coocurrence_matrix[index]
 
     def __len__(self):
-        return len(self.__coocurrence_matrix)
+        return len(self._coocurrence_matrix)
 
 
 class NotTrainedError(Exception):
