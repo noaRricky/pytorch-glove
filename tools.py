@@ -1,4 +1,4 @@
-from collections import Counter
+from collections import Counter, defaultdict
 import spacy
 
 
@@ -19,26 +19,30 @@ class SpacyTokenizer:
 
 class Dictionary:
 
-    def __init__(self, lang: str, min_occurrances=1):
+    def __init__(self, min_occurrances=1):
 
         self.vocab_size = 0
-        self.word2idx = {}
-        self.min_occurraceces = min_occurrances
+        self.word2idx = defaultdict(int)
+        self.min_occurrances = min_occurrances
 
     def update(self, doc: list):
 
-        min_occurrances = self.min_occurraceces
+        vocab_size, word2idx, min_occurrances = self.vocab_size, self.word2idx, self.min_occurrances
 
         # count word occurrance and vocab size
         words_counts = Counter()
         for tokens in doc:
             words_counts.update(tokens)
-        self.vocab_size = vocab_size = len(words_counts)
 
+        word_len = len(words_counts)
         # filter word occurrances <= min_occurrances and build word2idx
         filter_vocabs = [word for word, count in words_counts.most_common(
-            vocab_size) if count >= min_occurrances]
-        self.word2idx = {word: idx for idx, word in enumerate(filter_vocabs)}
+            word_len) if count >= min_occurrances]
+        for word in filter_vocabs:
+            if word not in word2idx:
+                word2idx[word] = vocab_size
+                vocab_size += 1
+        self.vocab_size = vocab_size
 
     def corpus(self, doc: list) -> list:
 
@@ -52,4 +56,7 @@ if __name__ == '__main__':
     tokenizer = SpacyTokenizer('en_core_web_sm')
     text = "This is an apple. \n This is a tea."
     doc = tokenizer.tokenize(text)
-    print(type(doc[0][0]))
+    dictionary = Dictionary()
+    dictionary.update(doc)
+    corpus = dictionary.corpus(doc)
+    print(corpus)
