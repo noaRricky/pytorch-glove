@@ -109,12 +109,7 @@ class GloVeModel(nn.Module):
                 loss.backward()
                 optimizer.step()
 
-    def id_for_word(self, word):
-        if self._word_to_id is None:
-            raise NotFitToCorpusError(
-                "Need to fit model to corpus before looking up word ids.")
-
-        return self._word_to_id[word]
+        print("finish glove vector training")
 
     def embedding_for_tensor(self, tokens):
         if not torch.is_tensor(tokens):

@@ -3,8 +3,16 @@ import spacy
 
 
 class SpacyTokenizer:
+    """ Tool for tokenize powered by spacy module
+    """
+
 
     def __init__(self, lang: str):
+        """ Initialize the language type for token
+        
+        Args:
+            lang (str): language type for tokenizer
+        """
         self._nlp = spacy.load(lang)
 
     def tokenize(self, text: str):
@@ -18,6 +26,12 @@ class SpacyTokenizer:
 
 
 class Dictionary:
+    """ Tool to build word2idx and doc2idx
+
+    Args:
+        doc {list}: list of documents contains words
+    """
+
 
     def __init__(self, doc=None):
 
@@ -27,6 +41,12 @@ class Dictionary:
         self.update(doc)
 
     def update(self, doc: list):
+        """ Update word2idx information by doc
+        
+        Args:
+            doc (list): list of words
+        """
+
 
         if doc is None:
             return
@@ -46,6 +66,15 @@ class Dictionary:
         self.vocab_size = vocab_size
 
     def corpus(self, doc: list) -> list:
+        """ Convert text of documents to idx of documents
+        
+        Args:
+            doc (list): text of documents
+        
+        Returns:
+            list: idx of documents
+        """
+
 
         word2idx = self.word2idx
         corpus = [[word2idx[word] for word in line if word in word2idx]
