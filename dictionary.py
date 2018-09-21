@@ -20,7 +20,7 @@ class SpacyDictionary:
         lines = text.splitlines()
 
         token_lines = [
-            [token.text for token in self._nlp(text)] for text in lines]
+            [token.text for token in self._nlp(text.strip())] for text in lines]
 
         # count word occurrance and vocab size
         words_counts = Counter()
@@ -41,7 +41,7 @@ class SpacyDictionary:
 
 if __name__ == '__main__':
     dictionary = SpacyDictionary('en_core_web_sm')
-    string = "When Sebastian Thrun started working on self-driving cars at started"
+    string = "When Sebastian Thrun started working on self-driving cars at started \n apple"
     corpus = dictionary.tokenize(string)
     print(corpus)
     print(dictionary.vocab_size)
