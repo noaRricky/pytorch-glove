@@ -26,10 +26,12 @@ class GloVeModel(nn.Module):
         self.min_occurrance = min_occurrance
         self.x_max = x_max
 
-        self._focal_embeddings = nn.Embedding(vocab_size, embedding_size)
-        self._context_embeddings = nn.Embedding(vocab_size, embedding_size)
-        self._focal_biases = nn.Embedding(vocab_size, 1)
-        self._context_biases = nn.Embedding(vocab_size, 1)
+        self._focal_embeddings = nn.Embedding(
+            vocab_size, embedding_size).type(torch.float64)
+        self._context_embeddings = nn.Embedding(
+            vocab_size, embedding_size).type(torch.float64)
+        self._focal_biases = nn.Embedding(vocab_size, 1).type(torch.float64)
+        self._context_biases = nn.Embedding(vocab_size, 1).type(torch.float64)
         self._glove_dataset = None
 
         for params in self.parameters():
@@ -71,7 +73,7 @@ class GloVeModel(nn.Module):
                               if words[0] in tokens and words[1] in tokens]
         self._glove_dataset = GloVeDataSet(coocurrence_matrix)
 
-    def train(self, num_epoch, batch_size=512, learning_rate=0.05, batch_interval=100):
+    def train(self, num_epoch, batch_size=512, learning_rate=0.05, loop_interval=10):
         """Training GloVe model
 
         Args:
@@ -101,8 +103,8 @@ class GloVeModel(nn.Module):
                 loss = self._loss(i_s, j_s, counts)
 
                 total_loss += loss.item()
-                if idx % batch_interval == 0:
-                    avg_loss = total_loss / batch_interval
+                if idx % loop_interval == 0:
+                    avg_loss = total_loss / loop_interval
                     print("epoch: {}, current step: {}, average loss: {}".format(
                         epoch, idx, avg_loss))
 
@@ -136,8 +138,8 @@ class GloVeModel(nn.Module):
                          context_bias + log_cooccurrences) ** 2
 
         single_losses = weight_factor * distance_expr
-        total_loss = torch.sum(single_losses)
-        return total_loss
+        mean_loss = torch.mean(single_losses)
+        return mean_loss
 
 
 class GloVeDataSet(Dataset):

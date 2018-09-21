@@ -14,12 +14,12 @@ class SpacyTokenizer:
         """
         self._nlp = spacy.load(lang)
 
-    def tokenize(self, text: str):
+    def tokenize(self, text: str) -> list:
         # we don't need new line as token
         lines = text.splitlines()
 
-        doc = [
-            [token.text for token in self._nlp(text.strip())] for text in lines]
+        doc = [[token.text for token
+                in self._nlp.tokenizer(text.strip())] for text in lines]
 
         return doc
 
