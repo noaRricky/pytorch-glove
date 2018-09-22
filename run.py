@@ -13,7 +13,7 @@ LANG = 'en_core_web_sm'
 EMBEDDING_SIZE = 128
 CONTEXT_SIZE = 3
 NUM_EPOCH = 50
-LEARNING_RATE = 0.00001
+LEARNING_RATE = 0.01
 
 
 def read_data(file_path, type='file'):

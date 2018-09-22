@@ -107,6 +107,7 @@ class GloVeModel(nn.Module):
                     avg_loss = total_loss / loop_interval
                     print("epoch: {}, current step: {}, average loss: {}".format(
                         epoch, idx, avg_loss))
+                    total_loss = 0
 
                 loss.backward()
                 optimizer.step()
