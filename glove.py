@@ -118,6 +118,15 @@ class GloVeModel(nn.Module):
 
         print("finish glove vector training")
 
+    def get_coocurrance_matrix(self):
+        """ Return co-occurance matrix for saving
+
+        Returns:
+            list: list itam (word_idx1, word_idx2, cooccurances)
+        """
+
+        return self._glove_dataset._coocurrence_matrix
+
     def embedding_for_tensor(self, tokens):
         if not torch.is_tensor(tokens):
             raise ValueError("the tokens must be pytorch tensor object")
@@ -196,5 +205,6 @@ def _window(region, start_index, end_index):
         end_index (int): index for the end step of window
     """
     last_index = len(region) + 1
-    selected_tokens = region[max(start_index, 0): min(end_index, last_index) + 1]
+    selected_tokens = region[max(start_index, 0):
+                             min(end_index, last_index) + 1]
     return selected_tokens

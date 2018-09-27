@@ -11,6 +11,7 @@ logging.basicConfig(
 FILE_PATH = './data/text8.zip'
 MODLE_PATH = './model/glove.pt'
 DOC_PATH = './data/corpus.pickle'
+COMATRIX_PATH = './data/comat.pickle'
 LANG = 'en_core_web_sm'
 EMBEDDING_SIZE = 128
 CONTEXT_SIZE = 3
@@ -85,7 +86,15 @@ def train_glove_model():
     logging.info("init model hyperparameter")
     model = GloVeModel(EMBEDDING_SIZE, CONTEXT_SIZE, vocab_size)
     model.to(device)
+
+    # fit corpus to count cooccurance matrix
     model.fit(corpus)
+
+    cooccurance_matrix = model.get_coocurrance_matrix()
+    # saving cooccurance_matrix
+    with open(COMATRIX_PATH, mode='wb') as fp:
+        pickle.dump(cooccurance_matrix, fp)
+
     model.train(NUM_EPOCH, device, learning_rate=LEARNING_RATE)
 
     # save model for evaluation
