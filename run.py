@@ -1,5 +1,6 @@
 import zipfile
 import logging
+import pickle
 import torch
 from glove import GloVeModel
 from tools import SpacyTokenizer, Dictionary
@@ -7,12 +8,14 @@ from tools import SpacyTokenizer, Dictionary
 logging.basicConfig(
     format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
-FILE_PATH = './data/short_story.txt'
+FILE_PATH = './data/text8.zip'
 MODLE_PATH = './model/glove.pt'
+DOC_PATH = './data/corpus.pickle'
 LANG = 'en_core_web_sm'
 EMBEDDING_SIZE = 128
 CONTEXT_SIZE = 3
-NUM_EPOCH = 50
+NUM_EPOCH = 100
+BATHC_SIZE = 512
 LEARNING_RATE = 0.01
 
 
@@ -26,7 +29,7 @@ def read_data(file_path, type='file'):
     if type is 'file':
         with open(file_path, mode='r', encoding='utf-8') as fp:
             text = fp.read()
-    else:
+    elif type is 'zip':
         with zipfile.ZipFile(file_path) as fp:
             text = fp.read(fp.namelist()[0]).decode()
     return text
@@ -44,16 +47,25 @@ def preprocess(file_path):
     """
 
     # preprocess read raw text
-    text = read_data(FILE_PATH)
-    logging.info("read raw data")
+    # text = read_data(FILE_PATH, type='zip')
+    # logging.info("read raw data")
 
     # init base model
-    tokenizer = SpacyTokenizer(LANG)
+    # tokenizer = SpacyTokenizer(LANG)
     dictionary = Dictionary()
 
     # build corpus
-    doc = tokenizer.tokenize(text)
-    logging.info("after generate tokens from text")
+    # doc = tokenizer.tokenize(text)
+    # logging.info("after generate tokens from text")
+
+    # save doc
+    # with open(DOC_PATH, mode='wb') as fp:
+    #     pickle.dump(doc, fp)
+    # logging.info("tokenized documents saved!")
+    # load doc
+    with open(DOC_PATH, 'rb') as fp:
+        doc = pickle.load(fp)
+
     dictionary.update(doc)
     logging.info("after generate dictionary")
     corpus = dictionary.corpus(doc)
@@ -74,7 +86,7 @@ def train_glove_model():
     model = GloVeModel(EMBEDDING_SIZE, CONTEXT_SIZE, vocab_size)
     model.to(device)
     model.fit(corpus)
-    model.train(NUM_EPOCH, learning_rate=LEARNING_RATE)
+    model.train(NUM_EPOCH, device, learning_rate=LEARNING_RATE)
 
     # save model for evaluation
     torch.save(model.state_dict(), MODLE_PATH)

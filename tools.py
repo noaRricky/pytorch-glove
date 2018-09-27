@@ -6,13 +6,13 @@ class SpacyTokenizer:
     """ Tool for tokenize powered by spacy module
     """
 
-    def __init__(self, lang: str):
+    def __init__(self, lang: str, disable=['parser', 'tagger', 'ner']):
         """ Initialize the language type for token
 
         Args:
             lang (str): language type for tokenizer
         """
-        self._nlp = spacy.load(lang)
+        self._nlp = spacy.load(lang, disable=disable)
 
     def tokenize(self, text: str) -> list:
         # we don't need new line as token
@@ -82,7 +82,4 @@ if __name__ == '__main__':
     tokenizer = SpacyTokenizer('en_core_web_sm')
     text = "This is an apple. \n This is a tea."
     doc = tokenizer.tokenize(text)
-    dictionary = Dictionary()
-    dictionary.update(doc)
-    corpus = dictionary.corpus(doc)
-    print(corpus)
+    print(doc)

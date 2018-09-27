@@ -73,11 +73,12 @@ class GloVeModel(nn.Module):
                               if words[0] in tokens and words[1] in tokens]
         self._glove_dataset = GloVeDataSet(coocurrence_matrix)
 
-    def train(self, num_epoch, batch_size=512, learning_rate=0.05, loop_interval=10):
+    def train(self, num_epoch, device, batch_size=512, learning_rate=0.05, loop_interval=10):
         """Training GloVe model
 
         Args:
             num_epoch (int): number of epoch
+            device (str): cpu or gpu
             batch_size (int, optional): Defaults to 512.
             learning_rate (float, optional): Defaults to 0.05. learning rate for Adam optimizer
             batch_interval (int, optional): Defaults to 100. interval time to show average loss
@@ -100,6 +101,9 @@ class GloVeModel(nn.Module):
                 optimizer.zero_grad()
 
                 i_s, j_s, counts = batch
+                i_s = i_s.to(device)
+                j_s = j_s.to(device)
+                counts = counts.to(device)
                 loss = self._loss(i_s, j_s, counts)
 
                 total_loss += loss.item()
